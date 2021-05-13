@@ -51,9 +51,12 @@ class CardDeck {
 }
 class Card{
     constructor(id){
-        this.id = id
-        this.rank = id%13
-        this.suit = Math.floor(id/13)
+        this.id = id;
+        this.rank = id%13+1;
+        this.suit = Math.floor(id/13);
+        if(this.rank == 1){
+            this.rank = 14;
+        }
     }
 }
 //random성 테스트용 함수.
@@ -136,140 +139,144 @@ class Player{
     //2장의 카드와 5장의 커뮤니티 카드를 조합하여 가장 높은 랭크의 조합을 리턴
     
 }
+//7장의 카드를 받아 5장의 가장 높은 패를 만들어 종류와 키커정보를 리턴하는 함수.
+function handsEvaluator(cardlist){
+    //판단 기준: 무늬, 연속 숫자, 중복 숫자 세가지를 기준으로 패의 높낮이가 정해짐.
+    //족보 순위: sf, fk, fh, f, s, tk, tp, op, h 스트레이트 플러시, 포카드, 풀하우스, 플러시, 스트레이트, 쓰리카드, 투페어, 원페어, 하이카드
+    //점수 업데이트는 기존 점수보다 높아야 하므로 0점보다 낮은 -1점으로 초기화
+    let score=-1;
+    let hands=[];
+    cardlist.sort(sortCardDecrement);
+    updateScore(CheckFlush(cardlist));
+    updateScore(CheckStraight(cardlist));
+    updateScore(CheckKind(cardlist));
 
-//작업중...
-function EvalHandRanking(cardlist){
-    
-    //계산의 편의를 위해 id를 카드 객체로 바꿈.
-    let i;
-    let j;
-    for(i=0; i<7; i++){
-        cardlist[i]=new Card(cardlist[i]);
-    }
-    //족보 순서: sf 8점, fk 7점, fh 6점, f 5점, s 4점, tk 3점, tp 2점, op 1점, h 0점. rf는 sf의 일종이며 가장 높은 패.
-    //플러시와 스트레이트를 먼저 구분한 뒤 중복카드(원페어 투페어 쓰리카드 포카드)를 검사
-    let score = 0;
-    
-}
-//카드의 숫자만 따져서 스트레이트인지 아닌지 판별
-function CheckStraight(cardlist){
-    let i;
-    let j;
-    let sortedRankList = [];
-    let len_c = cardlist.length;
-    for(i=0; i<len_c; i++){
-        if(sortedRankList.includes(cardlist[i].rank)){
-            //중복된 숫자는 배제해야 스트레이트 판별이 쉬움.
-            continue;
-        }
-        sortedRankList.push(cardlist[i].rank);
-        //스트레이트에서 a는 1일수도 14가 될수도 있음.
-        if(cardlist[i].rank==0){
-            sortedRankList.push(13);
+    function updateScore(newScore){
+        if(score<newScore[0]){
+            score = newScore[0];
+            hands = newScore[1];
         }
     }
-    let len_r = sortedRankList.length;
-    if(len_r<5){
-        //중복되지 않는 수가 5개가 안됨. 스트레이트 아님.
-        return [false, null];
-    }
-    //내림차순으로 정렬
-    sortedRankList.sort(SortDecrement);
-    //debug
-    console.log(sortedRankList)
-    //카드 갯수-4번 검사하면 됨. 
-    for(i=0; i<len_r-4; i++){
-        let start = sortedRankList[i];
-        //j = 1 to 4
-        for(j=1; j<5; j++){
-            //start로 부터 j만큼 떨어진 요소는 j만큼 작아야함.
-            if(sortedRankList[i+j]==start-j){
-                if(j<4){
-                    continue;
+    function CheckFlush(cardlist){
+        let suitlist = [[],[],[],[]];
+        let i;
+        let j;
+        for(i=0; i<7; i++){
+            suitlist[cardlist[i].suit].push(cardlist[i]);
+        }
+        for(i=0; i<4; i++){
+            let listnum = suitlist[i].length
+            if(listnum>=5)
+            {   //플러시는 확실. 스트레이트 플러시인가?
+                let cardlist=[];
+                for(j=0; j<listnum; j++){
+                    cardlist.push(suitlist[i][j]);
                 }
-                else if(j==4){
-                    //4번의 시험을 통과함. 스트레이트 맞음. A가 고려된 내림차순 정렬이므로 처음 발견된 스트레이트가 가장높은 스트레이트.
-                    //true 와 가장 높은 스트레이트 조합을 객체로 만들어 리턴.
-                    return [true, sortedRankList.slice(i,i+5)];
+                let result = CheckStraight(cardlist);
+                if(result[0]){
+                    return [8,result[1]]
+                } else{
+                    //rank로 정렬된 상태로 받기 때문에 suitlist에도 정렬돼있고 0번부터 5번까지가 항상 가장 높은 패
+                    return [5,suitlist[i].slice(0,5)]
                 }
             }
-            //만약 그렇지 못하면 스트레이트가 아님.
+        }
+        //for문에서 리턴이 안되면 플러시가 아님.
+        return [0,null]
+    }
+    function CheckStraight(cardlist){
+        //내림차순으로 정렬된 카드 리스트를 받음.
+        let i;
+        let j;
+        let ranklist = [];
+        cardlist.forEach(function(v){ranklist.push(v.rank)})
+        if(ranklist.includes(14)){
+            ranklist.push(1);
+        }
+        //숫자만 가지고 스트레이트인지 따지는 함수이기 때문에 중복값을 제거하는편이 계산하기 편함.
+        let uniquelist = ranklist.filter((element, index) => {
+            return ranklist.indexOf(element) === index;
+        });
+        let length = uniquelist.length;   //2~8개
+        for(i=0; i<length-4; i++){  //최소 5개는 있어야함.
+            for(j=1; j<5; j++){  
+                if(uniquelist[i]==uniquelist[i+j]+j){
+                    //스트레이트임.
+                    let retlist = [];
+                    for(j=0;j<5; j++){
+                        retlist.push( cardlist.find(function(v){
+                            if(uniquelist[i+j]==1)
+                                return v.rank==14;
+                            return v.rank==uniquelist[i+j]}) );
+                    }
+                    return [4, retlist]
+                }
+            }
+        }
+        //for문에서 리턴이 안되면 스트레이트가 아님.
+        return [0,null]
+    }
+    function CheckKind(cardlist){
+        //같은 숫자의 카드로 이뤄지는 패를 판별하는 함수
+        let kindlist=[[],[],[]];
+        //같은 숫자의 갯수
+        let count=1;
+        let i;
+        let length = cardlist.length;
+        let current = cardlist[0];
+        let retlist = [];
+        //kindlist 검사
+        for(i=1; i<length; i++){
+            if(current.rank == cardlist[i])
+                count ++;
             else{
-                break;
+                current = cardlist[i];
+                if(count>1)
+                    kindlist[count-2].push(current);
+                count = 1;
             }
         }
-    }
-    //모든 검사 결과 스트레이트 조합이 발견되지 않았다면 false와 null을 조합하여 리스트로 만들어 리턴.
-    return [false, null];
-}
-function CheckFlush(cardlist){
-    let suitlist=[ [],[],[],[], ];
-    let i;
-    for(i=0; i<7; i++){
-        let suit = cardlist[i].suit;
-        suitlist[suit].push(cardlist[i]);
-    }
-    for(i=0; i<4; i++){
-        let len_s = suitlist[i].length;
-        if(len_s>=5){
-            //flush는 확정. straight flush인지 검사.
-            let straight = CheckStraight(suitlist[i])
-            if(straight[0]){
-                return [true, straight[1]];
-            }
-            //스트레이트가 아닐경우 가장 높은 조합을 뽑아 리턴
-            else{
-                let ranklist =[];
-                //랭크 리스트에 현재 무늬리스트의 카드정보에서 랭크정보만 넣음.
-                suitlist[i].forEach(function(a){ranklist.push(a.rank)});
-                ranklist.sort(SortDecrement);
-                //같은 무늬중 내림차순으로 5개가 가장 높은 패
-                return [true,ranklist.slice(0,5)]
-            }
-        }
-    }
-    //flush 아님.
-    return [false, null];
-}
-function CheckPair(cardlist){
-    let ranklist = new Array(13);
-    ranklist.fill(0)
-    let len_c = cardlist.length;
-    let i;
-    for(i=0; i<len_c; i++){
-        ranklist[cardlist[i].rank]++;
-    }
-    if(ranklist.includes(4)){
-        //Four of a Kind. 7장의 카드로는 한개밖에 불가능.
-        let index = ranklist.indexOf(4)
-        //0 이상의 값을 가진 요소 중 포카드가 아니면서 가장 인덱스가 높은것. 0번 인덱스는 a이므로 예외적으로 가장 높음.
-        let max;
-        if(index !=0 && ranklist[0]>0){
-            return [4,[index,index,index,index,13]]
-        }
-        for(i=1; i< 13; i++){
-            if(ranklist[i]>0){
-                max=i;
-            }
-        }
-        return [4,[index,index,index,index,max]]
-    }
-    else if(ranklist.includes(3)){
-        //three of a kind 또는 풀하우스
-        if(ranklist.includes(2) || ranklist.includes(3)){
-            //3카드가 둘이라면 
-            //3+2 = 5. 그러나 4카드가 더 높음.
-            return [5, []]
-        }
-    }
+        if(kindlist[2].length>0){
+            //four of kind
+            retlist.concat(kindlist[2][0]);
+            retlist.push(cardlist.find(function(v){return v.rank != kindlist[2][0]}));
+            return [7,retlist]
+        } else if(kindlist[1].length>0){
+            //three of kind or full house
+            if(kindlist[1].length>1){
+                //full house
+                retlist.concat(kindlist[1][0],kindlist[1][1]);
+                retlist.pop();
+                return [6,retlist];
+            } else if(kindlist[0].length>0){
+                //full house
+                retlist.concat(kindlist[1][0],kindlist[0][0]);
+                return [6,retlist];
+            } else {    //three of kind
+                retlist.concat(kindlist[1][0], cardlist.filter(function(v){return v.rank != kindlist[1][0].rank}).slice(0,2));
+                return [3,retlist]
 
+            }
+        }else if(kindlist[0].length>1){
+            //two pair
+            retlist.concat(kindlist[0][0], kindlist[0][1]);
+            retlist.push(cardlist.find(function(v){return v.rank != kindlist[0][0].rank && v.rank != kindlist[0][1].rank}));
+            return [2, retlist];
+        }else if(kindlist[0].length>0){
+            //one pair
+            retlist.concat(kindlist[0][0], cardlist.filter(function(v){return v.rank != kindlist[0][0].rank}).slice(0,3));
+            return [1, retlist];
+        } else {
+            retlist.concat(cardlist.slice(0,5))
+            return [0,retlist];
+        }
+
+    }
+    return [score,hands];
 }
 
-function SortIncrement(a,b){
-    //sort에서 return값이 0보다 작을 경우 a가 b보다 낮은 색인값을 부여받음.
-    return a-b;
-}
-function SortDecrement(a,b){
-    //sort에서 return값이 0보다 클 경우 a가 b보다 높은 색인값을 부여받음.
-    return b-a;
+function sortCardDecrement(card1,card2){
+    //return값이 0보다 작을 경우 arg1이 arg2보다 낮은 색인값을 부여받음.
+    //return값이 0보다 클 경우 arg2가 arg1보다 낮은 색인값을 부여받음.
+    return card2.rank-card1.rank; //card2의 랭크가 더 크다면 card1보다 먼저 옮. 
 }
