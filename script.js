@@ -93,17 +93,15 @@ function DeckTest(times)
 //대체로 랜덤함을 확인
 //DeckTest(10000);
 
+evalTest([0,9,10,11,12,24,48])
 //판별함수 테스트용
-function evalTest(cardlist){
-    let retval = CheckStraight(cardlist);
-    console.log(retval);
-    
-    retval = CheckFlush(cardlist);
-    console.log(retval);
-
+function evalTest(idlist){
+    let cardlist = [];
+    idlist.forEach(function(v){cardlist.push(new Card(v))});
+    cardlist.forEach(function(v){console.log(v.rank)})
+    let result = handsEvaluator(cardlist);
+    console.log(result);
 }
-var testCardlist = [new Card(13), new Card(1), new Card(2), new Card(4), new Card(12), new Card(8), new Card(3)];
-evalTest(testCardlist);
 //덱 관리, 카드 돌리기, 플레이어 요청 검증 등 전반사항을 처리
 class GameManager{
     constructor(){
