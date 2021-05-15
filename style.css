@@ -1,0 +1,59 @@
+#gameDiv {
+    position:relative;
+    margin-top: 100px;
+    margin-bottom: 20px;
+    border-style: solid;
+    border-width: 1px;
+    width: 800px;
+    height: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: green;
+    background-image: linear-gradient(hsl(120, 50%, 50%), hsl(120, 50%, 30%));
+    border-radius: 50px;
+}
+
+#dealer{
+    position:relative;
+    margin: auto;
+    margin-top: 20px;
+    width: 100px;
+    height: 150px;
+}
+.deck{
+    position:absolute;
+    top:-2px;
+}
+.cardBack{
+    border-width: 5px;
+    border-color:whitesmoke;
+    border-style:solid;
+    border-radius: 5px;
+    width:100px;
+    height:140px;
+    box-shadow: 1px 1px gray;
+}
+#controlPane{
+    width: 800px;
+    height: 100px;
+    margin: auto;
+    background-color:firebrick;
+    display: grid;
+    grid-template-columns: auto auto auto;
+}
+#startBtn{
+    width:100px;
+    height:50px;
+    border-radius: 10px;
+    background-color: dodgerblue;
+}
+.center{
+    margin:auto;
+}
+.middle{
+    margin-top:auto;
+    margin-bottom:auto;
+}
+#gameTable {
+margin: auto;
+}

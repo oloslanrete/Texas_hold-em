@@ -2,13 +2,32 @@
 <html>
 <head>
 <title>Texas Holdem</title>
-
-<link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <div id = "game_div">
-
+    <div id = "gameDiv">
+        <div id = "dealer">
+            <div class="deck"><img class="cardBack" src="./images/darkest_highway_affliction.jpg"/>
+                <div class="deck"><img class="cardBack" src="./images/darkest_highway_affliction.jpg"/>
+                    <div class="deck"><img class="cardBack" src="./images/darkest_highway_affliction.jpg"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id = "communityCards"></div>
+        <div id = "me"></div>
     </div>
+    <div id = "controlPane" class="show">
+        <div class="center"></div>
+        <button id="startBtn" class="center">start</button>
+        <div class="middle">
+            <p></p>Money:</p>
+            <p id="money"></p>
+        </div>
+    </div>
+
 </body>
 <script src="./script.js"></script>
 </html>

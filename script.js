@@ -93,7 +93,7 @@ function DeckTest(times)
 //대체로 랜덤함을 확인
 //DeckTest(10000);
 
-evalTest([0,9,10,11,12,24,48])
+evalTest([13,0,17,19,21,28,48])
 //판별함수 테스트용
 function evalTest(idlist){
     let cardlist = [];
@@ -180,13 +180,14 @@ function handsEvaluator(cardlist){
             }
         }
         //for문에서 리턴이 안되면 플러시가 아님.
-        return [0,null]
+        return [-1,null]
     }
     function CheckStraight(cardlist){
         //내림차순으로 정렬된 카드 리스트를 받음.
         let i;
         let j;
         let ranklist = [];
+        let count=0;
         cardlist.forEach(function(v){ranklist.push(v.rank)})
         if(ranklist.includes(14)){
             ranklist.push(1);
@@ -199,20 +200,25 @@ function handsEvaluator(cardlist){
         for(i=0; i<length-4; i++){  //최소 5개는 있어야함.
             for(j=1; j<5; j++){  
                 if(uniquelist[i]==uniquelist[i+j]+j){
+                    count++;
+                    if(count==4){
                     //스트레이트임.
-                    let retlist = [];
-                    for(j=0;j<5; j++){
-                        retlist.push( cardlist.find(function(v){
-                            if(uniquelist[i+j]==1)
-                                return v.rank==14;
-                            return v.rank==uniquelist[i+j]}) );
+                        let retlist = [];
+                        for(j=0;j<5; j++){
+                            retlist.push( cardlist.find(function(v){
+                                if(uniquelist[i+j]==1)
+                                    return v.rank==14;
+                                return v.rank==uniquelist[i+j]}) );
+                        }
+                        return [4, retlist]
                     }
-                    return [4, retlist]
+                    
                 }
             }
+            count = 0;
         }
         //for문에서 리턴이 안되면 스트레이트가 아님.
-        return [0,null]
+        return [-1,null]
     }
     function CheckKind(cardlist){
         //같은 숫자의 카드로 이뤄지는 패를 판별하는 함수
@@ -236,36 +242,36 @@ function handsEvaluator(cardlist){
         }
         if(kindlist[2].length>0){
             //four of kind
-            retlist.concat(kindlist[2][0]);
+            //retlist.concat(kindlist[2][0]);
+            retlist=kindlist[2][0].slice();
             retlist.push(cardlist.find(function(v){return v.rank != kindlist[2][0]}));
             return [7,retlist]
         } else if(kindlist[1].length>0){
             //three of kind or full house
             if(kindlist[1].length>1){
                 //full house
-                retlist.concat(kindlist[1][0],kindlist[1][1]);
+                retlist=kindlist[1][0].concat(kindlist[1][1]).slice();
                 retlist.pop();
                 return [6,retlist];
             } else if(kindlist[0].length>0){
                 //full house
-                retlist.concat(kindlist[1][0],kindlist[0][0]);
+                retlist=kindlist[1][0].concat(kindlist[0][0]).slice();
                 return [6,retlist];
             } else {    //three of kind
-                retlist.concat(kindlist[1][0], cardlist.filter(function(v){return v.rank != kindlist[1][0].rank}).slice(0,2));
+                retlist=kindlist[1][0].concat(cardlist.filter(function(v){return v.rank != kindlist[1][0].rank}).slice(0,2));
                 return [3,retlist]
-
             }
         }else if(kindlist[0].length>1){
             //two pair
-            retlist.concat(kindlist[0][0], kindlist[0][1]);
+            retlist=kindlist[0][0].concat(kindlist[0][1]);
             retlist.push(cardlist.find(function(v){return v.rank != kindlist[0][0].rank && v.rank != kindlist[0][1].rank}));
             return [2, retlist];
         }else if(kindlist[0].length>0){
             //one pair
-            retlist.concat(kindlist[0][0], cardlist.filter(function(v){return v.rank != kindlist[0][0].rank}).slice(0,3));
+            retlist=kindlist[0][0].concat(cardlist.filter(function(v){return v.rank != kindlist[0][0].rank}).slice(0,3));
             return [1, retlist];
         } else {
-            retlist.concat(cardlist.slice(0,5))
+            retlist=cardlist.slice(0,5)
             return [0,retlist];
         }
 
