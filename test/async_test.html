@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>JavaScript async / await</h2>
+
+<p>Wait 3 seconds (3000 milliseconds) for this page to change.</p>
+<button id='stopBtn'>stop</button>
+<h1 id="demo"></h1>
+
+<script>
+let timer;
+let myPromise;
+let stopBtn = document.getElementById('stopBtn');
+stopBtn.addEventListener('click', function(){
+  clearTimeout(timer);
+  console.log('fuckyou!');
+});
+async function myDisplay() {
+  myPromise = new Promise(function(myResolve, myReject) {
+  timer = setTimeout(function() { myResolve("I love You !!"); }, 5000);
+  });
+  document.getElementById('demo').innerText = await myPromise;
+  alert('end');
+}
+
+myDisplay();
+
+</script>
+
+</body>
+</html>

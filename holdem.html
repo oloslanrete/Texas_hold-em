@@ -9,9 +9,9 @@
 <body>
     <div id = "gameDiv">
         <div id = "dealer">
-            <div class="deck"><img class="cardBack" src="./images/darkest_highway_affliction.jpg"/>
-                <div class="deck"><img class="cardBack" src="./images/darkest_highway_affliction.jpg"/>
-                    <div class="deck"><img class="cardBack" src="./images/darkest_highway_affliction.jpg"/>
+            <div class="deck"><img class="cardBack" src="./images/back_darkest_highway_affliction.jpg"/>
+                <div class="deck"><img class="cardBack" src="./images/back_darkest_highway_affliction.jpg"/>
+                    <div class="deck"><img class="cardBack" src="./images/back_darkest_highway_affliction.jpg"/>
                     </div>
                 </div>
             </div>
@@ -21,10 +21,15 @@
     </div>
     <div id = "controlPane" class="show">
         <div class="center"></div>
-        <button id="startBtn" class="center">start</button>
-        <div class="middle">
-            <p class=menu_text>Money:</p>
-            <p id="money"></p>
+        <div class="center">
+            <button id="startBtn" class="center gameBtn">start</button>
+            <button id="callBtn" class="center gameBtn" hidden disabled>call</button>
+            <button id="raiseBtn" class="center gameBtn" hidden disabled>raise</button>
+            <button id="foldBtn" class="center gameBtn" hidden disabled>fold</button>
+        </div>
+        <div class="center">
+            <p class=menuText>Money:</p>
+            <p id="money" class='menuText'></p>
         </div>
     </div>
 
