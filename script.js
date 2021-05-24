@@ -254,27 +254,37 @@ class GameManager{
                     this.dealingCards();
                     await this.animate_dealing();
                     console.log('end animate')
-                    this.takeActions();
+                    await this.takeActions();
                     this.game_phase++;
+                    this.nextPhase();
                 }
                 break;
             //플랍
             case 1:
-                
-                
+                this.flopCards();
+                this.animate_flop();
+                await this.takeActions();
+                this.game_phase++;
+                this.nextPhase();
                 break;
             //턴
             case 2:
-
+                this.turnCard();
+                this.animate_turn();
+                await this.takeActions();
+                alert('turn end')
+                this.game_phase++;
+                this.nextPhase();
                 break;
             //리버
             case 3:
-
-                this.game_phase==0;
+                this.riverCard();
+                this.animate_river();
+                await this.takeActions();
+                this.endRound();
                 break;
             
         }
-        this.game_phase++;
     }
     //참가비 거두기 return true or false
     gatherEnty(amount){
@@ -329,8 +339,88 @@ class GameManager{
             this.playerList[i].getCard2(this.cardDeck.Draw());
         }
     }
+    flopCards(){
+        this.board[0]=this.cardDeck.Draw();
+        this.board[1]=this.cardDeck.Draw();
+        this.board[2]=this.cardDeck.Draw();
+    }
+    turnCard(){
+        this.board[3]=this.cardDeck.Draw();
+    }
+    riverCard(){
+        this.board[4]=this.cardDeck.Draw();
+    }
+    endRound(){
+        this.decideWinner();
+        this.game_phase = 0;
+        this.pot = 0;
+        this.maxBet = 0;
+        this.board.fill(undefined);
+        this.cardDeck.Reset();
+        this.dealerIndex = (this.dealerIndex++)%this.playerCount;
+    }
+    decideWinner(){
+        let i;
+        let alivePlayer = [];
+        for(i=0; i<this.playerCount; i++){
+            if(this.playerList[i].status == playerStatusEnum.playing){
+                alivePlayer.push(this.playerList[i]);
+            }
+        }
+
+        //일단 비교한 사람들 중에선 가장 강한 패를 가진 플레이어를 저장하는 임시 변수.
+        //비기는 경우도 있기 때문에 리스트로 저장.
+        let tempWinners = [alivePlayer[0]];
+        //패 비교 결과
+        let compRes;
+        for(i=1; i<alivePlayer.length; i++){
+            compRes = compareHands(tempWinners[0].showMyHands(), alivePlayer[i].showMyHands())
+            if(compRes == 1){
+                continue;
+            } else if(compRes == 2){
+                tempWinners = [alivePlayer[i]];
+            }
+            else {
+                tempWinners.push(alivePlayer[i]);
+            }
+        }
+
+        let Winners = tempWinners;
+        //이긴 사람들끼리 배팅금 나눠먹기. 소숫점 이하는 버림.
+        let prize = Math.floor(this.pot/Winners.length);
+        Winners.forEach(function(v){
+            v.money += prize;
+        });
+        let WinnersId=[];
+        Winners.forEach(function(v){
+            WinnersId.push(v.id);
+        })
+        alert('The Winner is'+WinnersId.join(', '));
+        //리턴값 0 or 1 or 2 첫번째 패가 높으면 1, 두번째가 높으면 2, 같으면 0
+        function compareHands(hand1, hand2){
+            if (hand1[0] > hand2[0]){
+                return 1;
+            } else if(hand1[0] < hand2[0]){
+                return 2;
+            }
+            //여기까지 왔으면 키커로 승패를 가려야함.
+            let i;
+            for(i=0; i<5; i++){
+                if(hand1[1][i].rank > hand2[1][i].rank)
+                    return 1;
+                else if(hand1[1][i].rank < hand2[1][i].rank)
+                    return 2;
+                else 
+                    continue;
+            }
+            //5번의 비교로 승패가 가려지지 않았다면
+            return 0;
+        }
+        
+        return;
+    }
     //플레이어들의 액션을 받음.
-    takeActions(){
+    async takeActions(){
         let i;
         //딜러 다음 사람이 0번 인덱스, 딜러가 가장 마지막으로 정렬.
         let actionSortPlayerList;
@@ -346,16 +436,61 @@ class GameManager{
             //플레이어 본인일 경우 시간제한 30초 주고 결정을 기다림. 시간안에 결정 못하면 fold 처리.
             else if(actionSortPlayerList[i].id == uid){
                 actionSortPlayerList[i].id = uid;
-                this.waitAction(actionSortPlayerList[i])
-                deactivateActionButton();
+                await this.waitAction(actionSortPlayerList[i])
             }
         }
+        //모든 플레이어가 한번은 액션을 취함.
+        //폴드 하지 않은 플레이어들 전원이 같은 액수를 배팅할 때까지 액션루프
+        while(!checkBetSame){
+            removeFoldPlayer();
+            for(i=0; i<actionSortPlayerList.length; i++){
+                //이미 max bet만큼 배팅했으면 할거 없음.
+                if(actionSortPlayerList[i].reserved == this.maxBet){
+                    continue;
+                }
+                //봇이면 콜 하고 끝.
+                else if(actionSortPlayerList[i].id.slice(3) == 'bot'){
+                    actionSortPlayerList[i].actCall()
+                    continue;
+                }
+                //플레이어 본인일 경우 시간제한 30초 주고 결정을 기다림. 시간안에 결정 못하면 fold 처리.
+                else if(actionSortPlayerList[i].id == uid){
+                    actionSortPlayerList[i].id = uid;
+                    await this.waitAction(actionSortPlayerList[i])
+                }
+            }
+        }
+        //다른 플레이어들이 폴드를 해서 한명만 남은 경우
+        if(actionSortPlayerList.length == 1){
+            actionSortPlayerList[0].money += this.pot;
+            this.endRound();
+        }
         
+        function checkBetSame(playerlist){
+            let i;
+            for(i=0; i<playerlist.length; i++){
+                if(playerlist[i].reserved != this.maxBet){
+                    return false;
+                }
+            }
+            return true;
+        }
+        function removeFoldPlayer(playerList){
+            let i;
+            for(i=0; i<playerlist.length; i++){
+                if(playerlist[i].status == palyerStatusEnum.fold){
+                    playerlist.splice(i,1);
+                    i--;
+                }
+            }
+            return;
+        }
+        return;
     }
     async waitAction(player){
-        
+        let timeout;
         let timeoutPromise = new Promise((resolve,reject)=>{
-            let timeout = setTimeout(function(){
+            timeout = setTimeout(function(){
                 player.actFold();
                 resolve(playerActionEnum.actFold)
             },10000);
@@ -368,12 +503,14 @@ class GameManager{
             //raise는 조금 있다가 처리
             foldBtn.addEventListener('click', function(){
                 player.actFold();
+                clearTimeout(timeout);
                 resolve(playerActionEnum.actFold)
             },{once: true});
         });
         activateActionButton();
         let ret=await Promise.race([timeoutPromise, clickPromise]);
         //alert(ret);
+        deactivateActionButton();
         return ret;
     }
     //자신의 위치는 항상 6시이며 이를 기준으로 다른사람의 자리가 정해진다.
@@ -437,6 +574,57 @@ class GameManager{
         
         return true;
     }
+    async animate_flop(){
+        let gameDivCss=getComputedStyle(gameDiv)
+        let gameHeight = Number(gameDivCss.height.slice(0,-2));  
+        let gameWidth = Number(gameDivCss.width.slice(0,-2));
+        let cardx = 50;
+        let cardy = 140;
+        let y = gameHeight/2;
+        let x = gameWidth/2;
+        let positions = [[x-cardx*2.5,y-cardy/2],[x-cardx*1.5,y-cardy/2],[x-cardx*0.5,y-cardy/2]];
+        let i;
+        //커뮤니티 카드 세장 깔기
+        for(i=0; i<3; i++){
+            await animator.move(animator.newCard('c'+i), positions[i][0], positions[i][1]);
+        }
+        //카드 뒤집기
+        animator.flip(document.getElementById('c0'),this.board[0]);
+        animator.flip(document.getElementById('c1'),this.board[1]);
+        await animator.flip(document.getElementById('c2'),this.board[2]);
+    }
+    async animate_turn(){
+        let gameDivCss=getComputedStyle(gameDiv)
+        let gameHeight = Number(gameDivCss.height.slice(0,-2));  
+        let gameWidth = Number(gameDivCss.width.slice(0,-2));
+        let cardx = 50;
+        let cardy = 140;
+        let y = gameHeight/2;
+        let x = gameWidth/2;
+        let position = [x,y-cardy/2];
+        
+        //커뮤니티 카드 한장 깔기
+        await animator.move(animator.newCard('c3'), position[0], position[1]);
+        
+        //카드 뒤집기
+        await animator.flip(document.getElementById('c3'),this.board[3]);
+    }
+    async animate_river(){
+        let gameDivCss=getComputedStyle(gameDiv)
+        let gameHeight = Number(gameDivCss.height.slice(0,-2));  
+        let gameWidth = Number(gameDivCss.width.slice(0,-2));
+        let cardx = 50;
+        let cardy = 140;
+        let y = gameHeight/2;
+        let x = gameWidth/2;
+        let position = [x+cardx,y-cardy/2];
+        
+        //커뮤니티 카드 한장 깔기
+        await animator.move(animator.newCard('c4'), position[0], position[1]);
+        
+        //카드 뒤집기
+        await animator.flip(document.getElementById('c4'),this.board[4]);
+    }
     getPlayer(id){
         let index=this.playerList.findIndex(function(player){
             return player.id == id;
@@ -478,10 +666,9 @@ class Player{
         this.inHands[1]=c;
         console.log(this.id+","+c);
     }
-    //card id를 받음
-    getBoard(cardList){
+    getBoard(){
         //주소가 아닌 값을 복사
-        this.board = cardList.slice();
+        this.board = gm.board.slice();
     }
     //판돈을 가장 많이 건 사람의 액수를 받아옴
     getMaxBet(){
@@ -490,24 +677,31 @@ class Player{
     }
     //2장의 카드와 5장의 커뮤니티 카드를 조합하여 가장 높은 랭크의 조합을 리턴
     showMyHands(){
-        return handsEvaluator(this.inHands.concat(this.board))
+        this.getBoard();
+        let cardlist = [];
+        this.inHands.concat(this.board).forEach(function(v){
+            cardlist.push(new Card(v));
+        })
+        return handsEvaluator(cardlist);
     }
     actCall(){
         let amount = this.getMaxBet() - this.reserved;
         this.money -= amount;
         this.reserved += amount;
+        gm.pot += amount;
         this.action = playerActionEnum.actCall;
     }
     actFold(){
         this.action = playerActionEnum.actFold;
         this.status = playerStatusEnum.fold;
+        this.reserved = 0;
     }
-    actRaise(){
+    actRaise(amount){
 
     }
 }
 
-//7장의 카드를 받아 5장의 가장 높은 패를 만들어 종류와 키커정보를 리턴하는 함수.
+//7장의 카드를 받아 5장의 가장 높은 패를 만들어 종류와 키커정보를 리턴하는 함수. [int, array(5)]
 function handsEvaluator(cardlist){
     //판단 기준: 무늬, 연속 숫자, 중복 숫자 세가지를 기준으로 패의 높낮이가 정해짐.
     //족보 순위: sf, fk, fh, f, s, tk, tp, op, h 스트레이트 플러시, 포카드, 풀하우스, 플러시, 스트레이트, 쓰리카드, 투페어, 원페어, 하이카드
