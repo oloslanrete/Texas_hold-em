@@ -533,14 +533,14 @@ class GameManager{
             this.nextPhase();
         }
         if(player.id.slice(0,3) == 'bot'){
-            myEventBus.dispatchEvent(customEventDict.actionCall);
+            myEventBus.dispatchEvent(customEventDict.actionCall());
             return;
         }
         else{
             //액션 버튼을 활성화하고 30초 안에 버튼클릭 액션을 안하면 폴드 처리함.
             activateActionButton();
             this.actionTimer = setTimeout(function(){
-                myEventBus.dispatchEvent(customEventDict.actionTimeout);
+                myEventBus.dispatchEvent(customEventDict.actionTimeout());
             },30000);
         }
     }
@@ -898,7 +898,7 @@ var animator={
     animateNext: function(){
         let animation=this.animationQueue.shift();
         if(!animation){
-            myEventBus.dispatchEvent(customEventDict.animationDealEnd);
+            myEventBus.dispatchEvent(customEventDict.animationDealEnd());
             return;
         }
         switch(animation.type){
@@ -1016,14 +1016,14 @@ function activateActionButton(){
 
     let player = gm.playerList[gm.actionIndex];
     callBtn.addEventListener('click', function(){
-        myEventBus.dispatchEvent(customEventDict.actionCall);
+        myEventBus.dispatchEvent(customEventDict.actionCall());
         deactivateActionButton();
     },{once: true});
     raiseBtn.addEventListener('click',function(){
         myEventBus.dispatchEvent(customEventDict.actionRaise(10));
     },{once: true});
     foldBtn.addEventListener('click', function(){
-        myEventBus.dispatchEvent(customEventDict.actionFold);
+        myEventBus.dispatchEvent(customEventDict.actionFold());
         deactivateActionButton();
     },{once: true});
 }
@@ -1055,24 +1055,32 @@ const playerActionEnum = {
 };
 
 const customEventDict = {
-    animationDealEnd : new CustomEvent('animationEnd',{
-        detail: 'deal'
-    }),
-    actionCall : new CustomEvent('actionEnd',{
-        detail: 'call'
-    }),
-    actionFold : new CustomEvent('actionEnd',{
-        detail: 'fold'
-    }),
-    actionRaise : function(amount){
-        return new CustomEvent('actionEnd',{
-        detail: 'raise',
-        amount: amount
+    animationDealEnd : function(){
+        return new CustomEvent('animationEnd',{
+            detail: 'deal'
         });
     },
-    actionTimeout : new CustomEvent('actionEnd',{
-        detail: 'timeout'
-    })
+    actionCall : function(){
+        return new CustomEvent('actionEnd',{
+            detail: 'call'
+        });
+    },
+    actionFold : function(){
+        return new CustomEvent('actionEnd',{
+            detail: 'fold'
+        });
+    },
+    actionRaise : function(amount){
+        return new CustomEvent('actionEnd',{
+            detail: 'raise',
+            amount: amount
+        });
+    },
+    actionTimeout : function(){
+        return new CustomEvent('actionEnd',{
+            detail: 'timeout'
+        });
+    }
 }
 myEventBus.addEventListener('animationEnd',function({detail}){
     gm.nextPhase();
