@@ -263,11 +263,6 @@ class GameManager{
                     this.dealingCards();
                     this.animate_dealing();
                     console.log('end animate')
-                    /*
-                    
-                    this.game_phase++;
-                    this.nextPhase();
-                    */
                 }
                 break;
             //action phase
@@ -285,6 +280,7 @@ class GameManager{
                 break;
             //턴
             case 4:
+                console.log('turn phase');
                 this.turnCard();
                 this.animate_turn();
                 break;
@@ -293,6 +289,7 @@ class GameManager{
                 break;
             //리버
             case 6:
+                console.log('river phase');
                 this.riverCard();
                 this.animate_river();
                 break;
@@ -480,7 +477,6 @@ class GameManager{
             })
             console.log('action end, playerlist: '+this.playerList);
             if(this.game_phase != -1)
-                console.log('phase: '+this.game_phase)
                 this.nextPhase();
             return;
         }
@@ -988,18 +984,9 @@ function activateActionButton(){
     raiseBtn.disabled = false;
     foldBtn.disabled = false;
 
-    callBtn.addEventListener('click', function(){
-        myEventBus.dispatchEvent(customEventDict.actionCall());
-        deactivateActionButton();
-    },{once: true});
-    raiseBtn.addEventListener('click',function(){
-        myEventBus.dispatchEvent(customEventDict.actionRaise(10));
-        deactivateActionButton();
-    },{once: true});
-    foldBtn.addEventListener('click', function(){
-        myEventBus.dispatchEvent(customEventDict.actionFold());
-        deactivateActionButton();
-    },{once: true});
+    callBtn.addEventListener('click', clickCall);
+    raiseBtn.addEventListener('click',clickRaise);
+    foldBtn.addEventListener('click', clickFold);
 }
 function deactivateActionButton(){
     callBtn.hidden = true;
@@ -1008,7 +995,24 @@ function deactivateActionButton(){
     callBtn.disabled = true;
     raiseBtn.disabled = true;
     foldBtn.disabled = true;
+
+    callBtn.removeEventListener('click', clickCall);
+    raiseBtn.removeEventListener('click', clickRaise);
+    foldBtn.removeEventListener('click', clickFold);
 }
+function clickCall(){
+    deactivateActionButton();
+    myEventBus.dispatchEvent(customEventDict.actionCall());
+}
+function clickRaise(){
+    deactivateActionButton();
+    myEventBus.dispatchEvent(customEventDict.actionRaise(10));
+}
+function clickFold(){
+    deactivateActionButton();
+    myEventBus.dispatchEvent(customEventDict.actionFold());
+}
+
 function updateMoney(){
     let div = document.getElementById('money');
     let me = gm.playerList.find(function(v){
