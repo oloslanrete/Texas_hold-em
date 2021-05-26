@@ -83,6 +83,7 @@ class CardDeck {
             this.drawnCards[i]=null;
         }
         this.index = 0;
+        this.shuffle();
     }
 }
 class Card{
@@ -276,31 +277,32 @@ class GameManager{
             //플랍
             case 2:
                 console.log('flop phase');
-            /* 수정중...
-            case 1:
                 this.flopCards();
                 this.animate_flop();
-                await this.takeActions();
-                this.game_phase++;
-                this.nextPhase();
+                break;
+            case 3:
+                this.startActions();
                 break;
             //턴
-            case 2:
+            case 4:
                 this.turnCard();
                 this.animate_turn();
-                await this.takeActions();
-                alert('turn end')
-                this.game_phase++;
-                this.nextPhase();
+                break;
+            case 5:
+                this.startActions();
                 break;
             //리버
-            case 3:
+            case 6:
                 this.riverCard();
                 this.animate_river();
-                await this.takeActions();
+                break;
+            case 7:
+                this.startActions();
+                break;
+            //결산
+            case 8:
                 this.endRound();
                 break;
-            */
         }
     }
     //참가비 거두기 return true or false
@@ -337,7 +339,6 @@ class GameManager{
             return false;
         }
     }
-    //리턴 true/false. 선행조건도 충족하고 해당기능도 성공적으로 수행한 경우 true;
     dealingCards(){
         let count=this.playerList.length;
         let i;
@@ -375,6 +376,7 @@ class GameManager{
         this.board.fill(undefined);
         this.cardDeck.Reset();
         this.dealerIndex = (this.dealerIndex++)%this.playerList.length;
+        animator.reset();
     }
     decideWinner(){
         let i;
@@ -406,13 +408,15 @@ class GameManager{
         //이긴 사람들끼리 배팅금 나눠먹기. 소숫점 이하는 버림.
         let prize = Math.floor(this.pot/Winners.length);
         Winners.forEach(function(v){
+            console.log(v);
             v.money += prize;
         });
         let WinnersId=[];
         Winners.forEach(function(v){
             WinnersId.push(v.id);
         })
-        alert('The Winner is'+WinnersId.join(', '));
+        alert('The Winner is '+WinnersId.join(', '));
+        updateMoney();
         //리턴값 0 or 1 or 2 첫번째 패가 높으면 1, 두번째가 높으면 2, 같으면 0
         function compareHands(hand1, hand2){
             if (hand1[0] > hand2[0]){
@@ -438,71 +442,10 @@ class GameManager{
     }
     //플레이어들의 액션을 받음.
     startActions(){
+        console.log('action '+this.game_phase);
         this.actionIndex = this.dealerIndex;
         //nextAction에서 actionIndex ++ 하기 때문에 딜러 다음 플레이어부터 액션을 시작하려면 딜러 인덱스를 액션 인덱스로 지정해야함.
         this.nextAction();
-
-        /* 수정중...
-        for(i=0; i<actionSortPlayerList.length; i++){
-            //봇이면 콜 하고 끝.
-            if(actionSortPlayerList[i].id.slice(3) == 'bot'){
-                actionSortPlayerList[i].actCall()
-                continue;
-            }
-            //플레이어 본인일 경우 시간제한 30초 주고 결정을 기다림. 시간안에 결정 못하면 fold 처리.
-            else if(actionSortPlayerList[i].id == uid){
-                actionSortPlayerList[i].id = uid;
-                this.waitAction(actionSortPlayerList[i])
-            }
-        }
-        //모든 플레이어가 한번은 액션을 취함.
-        //폴드 하지 않은 플레이어들 전원이 같은 액수를 배팅할 때까지 액션루프
-        while(!checkBetSame){
-            removeFoldPlayer();
-            for(i=0; i<actionSortPlayerList.length; i++){
-                //이미 max bet만큼 배팅했으면 할거 없음.
-                if(actionSortPlayerList[i].reserved == this.maxBet){
-                    continue;
-                }
-                //봇이면 콜 하고 끝.
-                else if(actionSortPlayerList[i].id.slice(3) == 'bot'){
-                    actionSortPlayerList[i].actCall()
-                    continue;
-                }
-                //플레이어 본인일 경우 시간제한 30초 주고 결정을 기다림. 시간안에 결정 못하면 fold 처리.
-                else if(actionSortPlayerList[i].id == uid){
-                    actionSortPlayerList[i].id = uid;
-                    await this.waitAction(actionSortPlayerList[i])
-                }
-            }
-        }
-        //다른 플레이어들이 폴드를 해서 한명만 남은 경우
-        if(actionSortPlayerList.length == 1){
-            actionSortPlayerList[0].money += this.pot;
-            this.endRound();
-        }
-        
-        function checkBetSame(playerlist){
-            let i;
-            for(i=0; i<playerlist.length; i++){
-                if(playerlist[i].reserved != this.maxBet){
-                    return false;
-                }
-            }
-            return true;
-        }
-        function removeFoldPlayer(playerList){
-            let i;
-            for(i=0; i<playerlist.length; i++){
-                if(playerlist[i].status == palyerStatusEnum.fold){
-                    playerlist.splice(i,1);
-                    i--;
-                }
-            }
-            return;
-        }
-        */
-        return;
     }
     nextAction(){
         //액션 단계가 끝나는 조건1. 나머지가 모두 폴드하고 한명만 플레이 중인 경우. end round.
@@ -515,6 +458,7 @@ class GameManager{
         })
         if(playCount == 1){
             this.endRound();
+            return;
         }
 
         this.actionIndex = (this.actionIndex+1)%this.playerList.length;
@@ -529,9 +473,18 @@ class GameManager{
         }
         
         //액션이 끝나는 조건2. 현재 인덱스의 플레이어가 이미 액션을 취한 상태에서 가장 높은 액수의 베팅을 한 경우 next phase
-        if(player.action != playerActionEnum.actUndef && player.reserved == this.maxBet){
-            this.nextPhase();
+        if(player.action != playerActionEnum.actUndefined && player.reserved == this.maxBet){
+            //초기화
+            this.playerList.forEach(function(v){
+                v.action = playerActionEnum.actUndefined;
+            })
+            console.log('action end, playerlist: '+this.playerList);
+            if(this.game_phase != -1)
+                console.log('phase: '+this.game_phase)
+                this.nextPhase();
+            return;
         }
+
         if(player.id.slice(0,3) == 'bot'){
             myEventBus.dispatchEvent(customEventDict.actionCall());
             return;
@@ -539,12 +492,13 @@ class GameManager{
         else{
             //액션 버튼을 활성화하고 30초 안에 버튼클릭 액션을 안하면 폴드 처리함.
             activateActionButton();
-            this.actionTimer = setTimeout(function(){
+            //디버깅중... 제한시간 임시적으로 해제
+            /*this.actionTimer = setTimeout(function(){
                 myEventBus.dispatchEvent(customEventDict.actionTimeout());
-            },30000);
+            },30000);*/
         }
     }
-    //자신의 위치는 항상 6시이며 이를 기준으로 다른사람의 자리가 정해진다.
+    //자신의 위치는 항상 6시이며 이를 기준으로 다른사람의 자리가 정해짐.
     //playerlist에서 플레이어의 위치를 기준으로 좌우를 계산해서 오른쪽 왼쪽 리스트를 리턴
     setPosition(){
         //복사본을 만들어 원본에 영향을 주지 않고 작업.
@@ -607,7 +561,7 @@ class GameManager{
         
         return true;
     }
-    async animate_flop(){
+    animate_flop(){
         let gameDivCss=getComputedStyle(gameDiv)
         let gameHeight = Number(gameDivCss.height.slice(0,-2));  
         let gameWidth = Number(gameDivCss.width.slice(0,-2));
@@ -619,14 +573,12 @@ class GameManager{
         let i;
         //커뮤니티 카드 세장 깔기
         for(i=0; i<3; i++){
-            await animator.move(animator.newCard('c'+i), positions[i][0], positions[i][1]);
+            animator.animationQueue.push(new animation(animator.newCard('board'+i),'move', 250, positions[i][0], positions[i][1]));
+            animator.animationQueue.push(new animation(document.getElementById('board'+i),'flip',250, this.board[i]));
         }
-        //카드 뒤집기
-        animator.flip(document.getElementById('c0'),this.board[0]);
-        animator.flip(document.getElementById('c1'),this.board[1]);
-        await animator.flip(document.getElementById('c2'),this.board[2]);
+        animator.animateNext();
     }
-    async animate_turn(){
+    animate_turn(){
         let gameDivCss=getComputedStyle(gameDiv)
         let gameHeight = Number(gameDivCss.height.slice(0,-2));  
         let gameWidth = Number(gameDivCss.width.slice(0,-2));
@@ -634,15 +586,16 @@ class GameManager{
         let cardy = 140;
         let y = gameHeight/2;
         let x = gameWidth/2;
-        let position = [x,y-cardy/2];
+        let position = [x+cardx*0.5, y-cardy/2];
         
         //커뮤니티 카드 한장 깔기
-        await animator.move(animator.newCard('c3'), position[0], position[1]);
-        
+        animator.animationQueue.push(new animation(animator.newCard('board3'),'move', 250, position[0], position[1]));        
         //카드 뒤집기
-        await animator.flip(document.getElementById('c3'),this.board[3]);
+        animator.animationQueue.push(new animation(document.getElementById('board3'),'flip',250, this.board[3]));
+
+        animator.animateNext();
     }
-    async animate_river(){
+    animate_river(){
         let gameDivCss=getComputedStyle(gameDiv)
         let gameHeight = Number(gameDivCss.height.slice(0,-2));  
         let gameWidth = Number(gameDivCss.width.slice(0,-2));
@@ -650,13 +603,14 @@ class GameManager{
         let cardy = 140;
         let y = gameHeight/2;
         let x = gameWidth/2;
-        let position = [x+cardx,y-cardy/2];
+        let position = [x+cardx*1.5,y-cardy/2];
         
         //커뮤니티 카드 한장 깔기
-        await animator.move(animator.newCard('c4'), position[0], position[1]);
-        
+        animator.animationQueue.push(new animation(animator.newCard('board4'),'move', 250, position[0], position[1]));
         //카드 뒤집기
-        await animator.flip(document.getElementById('c4'),this.board[4]);
+        animator.animationQueue.push(new animation(document.getElementById('board4'),'flip',250, this.board[4]));
+
+        animator.animateNext();
     }
     getPlayer(id){
         let index=this.playerList.findIndex(function(player){
@@ -732,7 +686,13 @@ class Player{
         
     }
     actRaise(amount){
-
+        let change = gm.maxBet-this.reserved+amount;
+        this.money -=change;
+        updateMoney();
+        this.reserved += change;
+        gm.pot += change;
+        gm.maxBet = this.reserved;
+        this.action = playerActionEnum.actRaise;
     }
 }
 
@@ -885,6 +845,7 @@ function sortCardDecrement(card1,card2){
 }
 //css를 이용한 애니메이션 담당 오브젝트
 var animator={
+    createdCards:[],
     animationQueue: [],
     newCard: function(id){
         let deck=document.getElementsByClassName('deck')[2]
@@ -893,6 +854,7 @@ var animator={
         newcard.style.left='350px';
         newcard.style.top='20px';
         gameDiv.appendChild(newcard);
+        this.createdCards.push(newcard);
         return newcard;
     },
     animateNext: function(){
@@ -904,11 +866,15 @@ var animator={
         switch(animation.type){
             case 'move':
                 this.move(animation.div, animation.args[0], animation.args[1], animation.duration);
+                
                 break;
             case 'flip':
                 this.flip(animation.div, animation.args[0], animation.duration);
                 break;
         }
+        setTimeout(function(){
+            animator.animateNext();
+        },animation.duration)
         
     },
     move: function(div, moveToX, moveToY, duration){
@@ -930,9 +896,6 @@ var animator={
                 div.style.left = moveToX + "px";
             }
         }
-        setTimeout(function(){
-            animator.animateNext();
-        },duration);   
     },
     flip: function(div, cardid, duration){
         
@@ -985,14 +948,25 @@ var animator={
                 div.style.transform = "rotateY(0deg)";
             }
         },20);
-
-        setTimeout(function(){
-            animator.animateNext();
-        },duration);
     },
-    deleteCard: function(id){
-        let removeElement = document.getElementById(id);
-        gameDiv.removeChild(removeElement);
+    deleteCard: function(div){
+        console.log('remove div: '+div.getAttribute('id'));
+        gameDiv.removeChild(div);
+    },
+    reset: function(){
+        let cards = this.createdCards.slice();
+        this.createdCards = [];
+        cards.forEach(function(v){
+            animator.move(v,350,20,250);
+        });
+        setTimeout(function(){
+            cards.forEach(function(v){
+                animator.deleteCard(v);
+            });
+        },250);
+        setTimeout(function(){
+            myEventBus.dispatchEvent(customEventDict.animationResetEnd());
+        },250);
     }
 };
 //animator에서 사용할 animation class.
@@ -1014,13 +988,13 @@ function activateActionButton(){
     raiseBtn.disabled = false;
     foldBtn.disabled = false;
 
-    let player = gm.playerList[gm.actionIndex];
     callBtn.addEventListener('click', function(){
         myEventBus.dispatchEvent(customEventDict.actionCall());
         deactivateActionButton();
     },{once: true});
     raiseBtn.addEventListener('click',function(){
         myEventBus.dispatchEvent(customEventDict.actionRaise(10));
+        deactivateActionButton();
     },{once: true});
     foldBtn.addEventListener('click', function(){
         myEventBus.dispatchEvent(customEventDict.actionFold());
@@ -1035,6 +1009,13 @@ function deactivateActionButton(){
     raiseBtn.disabled = true;
     foldBtn.disabled = true;
 }
+function updateMoney(){
+    let div = document.getElementById('money');
+    let me = gm.playerList.find(function(v){
+        return v.id == uid;
+    });
+    div.innerText=me.money;
+}
 const playerStatusEnum = {
     spectate: 0,
     imin: 1,
@@ -1047,7 +1028,7 @@ const playerStatusEnum = {
 
 const playerActionEnum = {
     //아직 액션을 취하지 않음.
-    actUndef : 0,
+    actUndefined : 0,
     actCall : 1,
     actRaise : 2,
     actFold : 3 
@@ -1058,6 +1039,11 @@ const customEventDict = {
     animationDealEnd : function(){
         return new CustomEvent('animationEnd',{
             detail: 'deal'
+        });
+    },
+    animationResetEnd: function(){
+        return new CustomEvent('animationEnd',{
+            detail: 'reset'
         });
     },
     actionCall : function(){
@@ -1083,8 +1069,10 @@ const customEventDict = {
     }
 }
 myEventBus.addEventListener('animationEnd',function({detail}){
-    gm.nextPhase();
-    console.log(detail);
+    //if(gm.game_phase != -1){
+        gm.nextPhase();
+        console.log(detail);
+    //}
 });
 myEventBus.addEventListener('actionEnd',function({detail}){
     console.log(detail); // 'raise' or 'call' or 'fold' or 'timeout'...
@@ -1098,10 +1086,10 @@ myEventBus.addEventListener('actionEnd',function({detail}){
         case 'call':
             gm.playerList[gm.actionIndex].actCall();
             break;
-        /*case 'raise':
-            //TODO. 추후에 추가
+        case 'raise':
+            //TODO. 추후에 변경.
             gm.playerList[gm.actionIndex].actRaise(10);
-            break;*/
+            break;
     }
     clearTimeout(gm.actionTimer);
     gm.nextAction();
