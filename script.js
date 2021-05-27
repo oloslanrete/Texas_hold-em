@@ -97,49 +97,6 @@ class Card{
         }
     }
 }
-//random성 테스트용 함수.
-function DeckTest(times)
-{
-    let i;
-    let resultTable = new Array(52);
-    for(i=0; i<52; i++){
-        resultTable[i] = 0;
-    }
-    for(i=0; i<times; i++){
-        //카드덱을 생성해서 첫장만 확인
-        let testDeck = new CardDeck();
-        resultTable[testDeck.Draw()]++;
-    }
-
-    let table = document.createElement("table");
-    let tbody = document.createElement("tbody");
-    for(i=0; i<52; i++)
-    {
-        let tr=document.createElement("tr");
-        let td1=document.createElement("td");
-        let td2=document.createElement("td");
-        td1.appendChild(document.createTextNode(i));
-        td2.appendChild(document.createTextNode(resultTable[i]));
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        tbody.appendChild(tr);
-    }
-    table.appendChild(tbody);
-    let game_div=document.getElementById("gameDiv");
-    game_div.appendChild(table);
-}
-//대체로 랜덤함을 확인
-//DeckTest(10000);
-
-//evalTest([13,0,17,19,21,28,48])
-//판별함수 테스트용
-function evalTest(idlist){
-    let cardlist = [];
-    idlist.forEach(function(v){cardlist.push(new Card(v))});
-    cardlist.forEach(function(v){console.log(v.rank)})
-    let result = handsEvaluator(cardlist);
-    console.log(result);
-}
 //덱 관리, 카드 돌리기, 플레이어 요청 검증 등 전반사항을 처리
 class GameManager{
     constructor(max_p, max_s, baseEnty){
@@ -326,6 +283,7 @@ class GameManager{
                 v.status = playerStatusEnum.playing;
             })
             document.getElementById('money').innerText = p.money;
+            updatePot();
             return true;
         } else {
             //진행조건이 안맞으면 돈 돌려주고 진행 멈춤.
@@ -366,14 +324,16 @@ class GameManager{
         this.board[4]=this.cardDeck.Draw();
     }
     endRound(){
+        animator.clearActionDivs();
         this.decideWinner();
         this.game_phase = -1;
         this.pot = 0;
+        updatePot();
         this.maxBet = 0;
         this.board.fill(undefined);
         this.cardDeck.Reset();
         this.dealerIndex = (this.dealerIndex++)%this.playerList.length;
-        animator.reset();
+        animator.reset(5000);
     }
     decideWinner(){
         let i;
@@ -383,18 +343,34 @@ class GameManager{
                 alivePlayer.push(this.playerList[i]);
             }
         }
-
+        //showdown. 마지막까지 플레이중인 플레이어가 2이상이면 패를 공개
+        if(alivePlayer.length>1){
+            alivePlayer.forEach(function(v){
+                if(v.id != uid){
+                    animator.flip(document.getElementById(v.id+',0'),v.inHands[0],250);
+                    animator.flip(document.getElementById(v.id+',1'),v.inHands[1],250);
+                }    
+            })
+        }
+        //각 플레이어의 패의 점수를 저장. alert으로 각 플레이어의 점수를 표시하기 용이함.
+        let scorelist=[];
+        for(i=0; i<alivePlayer.length; i++){
+            scorelist.push(alivePlayer[i].showMyHands());
+        }
         //일단 비교한 사람들 중에선 가장 강한 패를 가진 플레이어를 저장하는 임시 변수.
         //비기는 경우도 있기 때문에 리스트로 저장.
         let tempWinners = [alivePlayer[0]];
+        let tempWinnersHands = scorelist[0];
         //패 비교 결과
         let compRes;
+        //i가 0부터 시작하면 처음에 자기 자신과 비교하게됨. 1부터 시작.
         for(i=1; i<alivePlayer.length; i++){
-            compRes = compareHands(tempWinners[0].showMyHands(), alivePlayer[i].showMyHands())
+            compRes = compareHands(tempWinnersHands, scorelist[i]);
             if(compRes == 1){
                 continue;
             } else if(compRes == 2){
                 tempWinners = [alivePlayer[i]];
+                tempWinnersHands = scorelist[i];
             }
             else {
                 tempWinners.push(alivePlayer[i]);
@@ -412,7 +388,12 @@ class GameManager{
         Winners.forEach(function(v){
             WinnersId.push(v.id);
         })
-        alert('The Winner is '+WinnersId.join(', '));
+        let scoreString=''
+        for(i=0; i<alivePlayer.length; i++){
+            scoreString+=alivePlayer[i].id+': '
+                +this.ScoreToString(scorelist[i][0])+'\n';
+        }
+        alert('The Winner is '+WinnersId.join(', ')+'\n'+scoreString);
         updateMoney();
         //리턴값 0 or 1 or 2 첫번째 패가 높으면 1, 두번째가 높으면 2, 같으면 0
         function compareHands(hand1, hand2){
@@ -474,6 +455,7 @@ class GameManager{
             //초기화
             this.playerList.forEach(function(v){
                 v.action = playerActionEnum.actUndefined;
+                animator.clearActionDivs();
             })
             console.log('action end, playerlist: '+this.playerList);
             if(this.game_phase != -1)
@@ -509,11 +491,13 @@ class GameManager{
             pIndex--;
         }
         while(pIndex<centerIndex){
-            //윗 요소를 앞으로 보내야 가운데로 만들 수 있음.
+            //뒷 요소를 앞으로 보내야 가운데로 만들 수 있음.
             tempPlayerList.unshift(tempPlayerList.pop());
             pIndex++;
         }
         let left = tempPlayerList.slice(pIndex+1, pLength);
+        //낮은 인덱스 = 테이블의 위쪽. 높은 인덱스 = 테이블의 아래쪽으로 통일하기 위해 반전.
+        left.reverse();
         let right = tempPlayerList.slice(0, pIndex);
         return [right,left];
     }
@@ -608,13 +592,62 @@ class GameManager{
 
         animator.animateNext();
     }
+    animateAction(id,action){
+        //본인 플레이어는 필요없음.
+        if(id == uid){
+            return;
+        }
+        let positions = this.setPosition();
+        let right = positions[0];
+        let left = positions[1];
+        
+        let gameDivCss=getComputedStyle(gameDiv);
+        let gameHeight = Number(gameDivCss.height.slice(0,-2));  
+        let gameWidth = Number(gameDivCss.width.slice(0,-2));
+        
+        let x, y;
+
+        let index;
+        index=right.findIndex(function(v){
+            return v.id==id;
+        })
+        if(index != undefined){
+            x = gameWidth-200;
+            y = gameHeight/(right.length+1)*(index+1);
+        } else{
+            x = 200;
+            y = gameHeight/(left.length+1)*(index+1);
+        }
+        animator.popAction(action,x,y);
+    }
     getPlayer(id){
         let index=this.playerList.findIndex(function(player){
             return player.id == id;
         })
         return this.playerList[index];
     }
-    
+    ScoreToString(score){
+        switch(score){
+            case 0:
+                return 'highcard';
+            case 1:
+                return 'one pair';
+            case 2:
+                return 'two pair';
+            case 3:
+                return 'three of kind';
+            case 4:
+                return 'straight';
+            case 5:
+                return 'flush';
+            case 6:
+                return 'full house';
+            case 7:
+                return 'four of kind';
+            case 8:
+                return 'straight flush';
+        }
+    }
 }
 //포커 참가자
 class Player{
@@ -672,6 +705,7 @@ class Player{
         this.money -= amount;
         this.reserved += amount;
         gm.pot += amount;
+        updatePot();
         this.action = playerActionEnum.actCall;
         
     }
@@ -687,6 +721,7 @@ class Player{
         updateMoney();
         this.reserved += change;
         gm.pot += change;
+        updatePot();
         gm.maxBet = this.reserved;
         this.action = playerActionEnum.actRaise;
     }
@@ -840,8 +875,9 @@ function sortCardDecrement(card1,card2){
     return card2.rank-card1.rank; //card2의 랭크가 더 크다면 card1보다 먼저 옮. 
 }
 //css를 이용한 애니메이션 담당 오브젝트
-var animator={
+const animator={
     createdCards:[],
+    createdActionDivs:[],
     animationQueue: [],
     newCard: function(id){
         let deck=document.getElementsByClassName('deck')[2]
@@ -852,6 +888,9 @@ var animator={
         gameDiv.appendChild(newcard);
         this.createdCards.push(newcard);
         return newcard;
+    },
+    newActionDiv: function(action){
+        
     },
     animateNext: function(){
         let animation=this.animationQueue.shift();
@@ -945,24 +984,53 @@ var animator={
             }
         },20);
     },
+    popAction: function(action, x, y,){
+        //create new div.
+        let div = document.createElement('div');
+        let content=document.createTextNode(action);
+        div.appendChild(content);
+        gameDiv.appendChild(div);
+        this.createdActionDivs.push(div);
+
+        //set div's position
+        div.style.position = 'absolute';
+        div.style.top = y+'px';
+        div.style.left = x+'px';
+        div.style.fontSize = '30px';
+        div.style.textShadow = '-1px 0 white, 0 1px white, 1px 0 white, 0 -1px white';
+    },
+    clearActionDivs: function(){
+        console.log('clearAction')
+        setTimeout(function(){
+            animator.createdActionDivs.forEach(function(v,i){
+                animator.deleteCard(v);
+                animator.createdActionDivs.splice(i,1);
+            });
+        },1000);
+    },
     deleteCard: function(div){
         console.log('remove div: '+div.getAttribute('id'));
         gameDiv.removeChild(div);
     },
-    reset: function(){
+    reset: function(timer){
+        if(timer==undefined || typeof timer != 'number'){
+            timer = 0;
+        }
         let cards = this.createdCards.slice();
         this.createdCards = [];
-        cards.forEach(function(v){
-            animator.move(v,350,20,250);
-        });
         setTimeout(function(){
             cards.forEach(function(v){
-                animator.deleteCard(v);
+                animator.move(v,350,20,250);
             });
-        },250);
-        setTimeout(function(){
-            myEventBus.dispatchEvent(customEventDict.animationResetEnd());
-        },250);
+            setTimeout(function(){
+                cards.forEach(function(v){
+                    animator.deleteCard(v);
+                });
+            },250);
+            setTimeout(function(){
+                myEventBus.dispatchEvent(customEventDict.animationResetEnd());
+            },250);
+        },timer);
     }
 };
 //animator에서 사용할 animation class.
@@ -1019,6 +1087,10 @@ function updateMoney(){
         return v.id == uid;
     });
     div.innerText=me.money;
+}
+function updatePot(){
+    let div = document.getElementById('pot');
+    div.innerText = gm.pot;
 }
 const playerStatusEnum = {
     spectate: 0,
@@ -1080,9 +1152,11 @@ myEventBus.addEventListener('animationEnd',function({detail}){
 });
 myEventBus.addEventListener('actionEnd',function({detail}){
     console.log(detail); // 'raise' or 'call' or 'fold' or 'timeout'...
+    let action = detail;
     switch(detail){
         case 'timeout':
             gm.playerList[gm.actionIndex].actFold();
+            action = 'fold';
             break;
         case 'fold':
             gm.playerList[gm.actionIndex].actFold();
@@ -1096,5 +1170,6 @@ myEventBus.addEventListener('actionEnd',function({detail}){
             break;
     }
     clearTimeout(gm.actionTimer);
+    gm.animateAction(gm.playerList[gm.actionIndex].id,action);
     gm.nextAction();
 });

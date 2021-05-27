@@ -15,10 +15,18 @@
 
 #dealer{
     position:relative;
-    margin: auto;
+    left: 350px;
     margin-top: 20px;
     width: 100px;
     height: 150px;
+}
+#potHeader{
+    position:relative;
+    left: 350px;
+    display:inline;
+}
+#pot{
+    display:inline;
 }
 .deck{
     position:absolute;
