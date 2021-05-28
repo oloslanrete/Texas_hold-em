@@ -727,7 +727,7 @@ class Player{
     }
 }
 
-//7장의 카드를 받아 5장의 가장 높은 패를 만들어 종류와 키커정보를 리턴하는 함수. [int, array(5)]
+//7장의 카드를 받아 5장으로 가장 높은 패를 만들어 종류와 패를 구성한 5장의 카드를 리턴하는 함수. [int, array(5)]
 function handsEvaluator(cardlist){
     //판단 기준: 무늬, 연속 숫자, 중복 숫자 세가지를 기준으로 패의 높낮이가 정해짐.
     //족보 순위: sf, fk, fh, f, s, tk, tp, op, h 스트레이트 플러시, 포카드, 풀하우스, 플러시, 스트레이트, 쓰리카드, 투페어, 원페어, 하이카드
@@ -761,7 +761,7 @@ function handsEvaluator(cardlist){
                     cardlist.push(suitlist[i][j]);
                 }
                 let result = CheckStraight(cardlist);
-                if(result[0]){
+                if(result[1]){
                     return [8,result[1]]
                 } else{
                     //rank로 정렬된 상태로 받기 때문에 suitlist에도 정렬돼있고 0번부터 5번까지가 항상 가장 높은 패
@@ -821,50 +821,103 @@ function handsEvaluator(cardlist){
         let retlist = [];
         //kindlist 검사
         for(i=1; i<length; i++){
-            if(current.rank == cardlist[i])
+            if(current.rank == cardlist[i].rank)
                 count ++;
             else{
-                current = cardlist[i];
                 if(count>1)
-                    kindlist[count-2].push(current);
+                    kindlist[count-2].push(current.rank);
                 count = 1;
+                current = cardlist[i];
             }
+        }
+        if(count>1){
+            kindlist[count-2].push(current.rank);
+            count = 1;
+            current = cardlist[i];
         }
         if(kindlist[2].length>0){
             //four of kind
             //retlist.concat(kindlist[2][0]);
-            retlist=kindlist[2][0].slice();
-            retlist.push(cardlist.find(function(v){return v.rank != kindlist[2][0]}));
+            count = 0;
+            cardlist.forEach(function(v){
+                //5장의 패는 4장의 카인드와 높은 패 한장으로 구성됨. 
+                if(v.rank==kindlist[2][0]){
+                    retlist.push(v);
+                }
+                else if(count<1){
+                    retlist.push(v);
+                }
+            });
             return [7,retlist]
         } else if(kindlist[1].length>0){
             //three of kind or full house
             if(kindlist[1].length>1){
-                //full house
-                retlist=kindlist[1][0].concat(kindlist[1][1]).slice();
-                retlist.pop();
+                //full house 3장의 카인드가 2개있는경우
+                cardlist.forEach(function(v){
+                    //5장의 패는 3장의 카인드 두개로 구성됨. 
+                    if(v.rank==kindlist[1][0] || v.rank==kindlist[1][1]){
+                        retlist.push(v);
+                    }
+                });
                 return [6,retlist];
             } else if(kindlist[0].length>0){
-                //full house
-                retlist=kindlist[1][0].concat(kindlist[0][0]).slice();
+                //full house 3장의 카인드와 2장의 페어가 있는 경우
+                cardlist.forEach(function(v){
+                    //5장의 패는 3장의 카인드와 2장의 페어로 구성됨.
+                    if(v.rank==kindlist[1][0] || v.rank==kindlist[0][0]){
+                        retlist.push(v);
+                    }
+                });
                 return [6,retlist];
             } else {    //three of kind
-                retlist=kindlist[1][0].concat(cardlist.filter(function(v){return v.rank != kindlist[1][0].rank}).slice(0,2));
+                count = 0;
+                cardlist.forEach(function(v){
+                    //5장의 패는 3장의 카인드와 2장의 높은 패로 구성됨.
+                    if(v.rank==kindlist[1][0]){
+                        retlist.push(v);
+                    }
+                    //이미 내림차순으로 정렬되어 있음.
+                    else if(count<2){
+                        retlist.push(v);
+                        count ++
+                    }
+                });
                 return [3,retlist]
             }
         }else if(kindlist[0].length>1){
             //two pair
-            retlist=kindlist[0][0].concat(kindlist[0][1]);
-            retlist.push(cardlist.find(function(v){return v.rank != kindlist[0][0].rank && v.rank != kindlist[0][1].rank}));
+            count = 0;
+            cardlist.forEach(function(v){
+                //5장의 패는 4장의 페어와 1장의 높은 패로 구성됨.
+                if(v.rank==kindlist[0][0] || v.rank==kindlist[0][1]){
+                    retlist.push(v);
+                }
+                //이미 내림차순으로 정렬되어 있음.
+                else if(count<1){
+                    retlist.push(v);
+                    count ++
+                }
+            });
             return [2, retlist];
         }else if(kindlist[0].length>0){
-            //one pair
-            retlist=kindlist[0][0].concat(cardlist.filter(function(v){return v.rank != kindlist[0][0].rank}).slice(0,3));
+            //one pair 
+            count = 0;
+            cardlist.forEach(function(v){
+                //5장의 패는 2장의 페어와 3장의 높은 패로 구성됨.
+                if(v.rank==kindlist[0][0]){
+                    retlist.push(v);
+                }
+                //이미 내림차순으로 정렬되어 있음.
+                else if(count<3){
+                    retlist.push(v);
+                    count ++
+                }
+            });
             return [1, retlist];
         } else {
             retlist=cardlist.slice(0,5)
             return [0,retlist];
         }
-
     }
     return [score,hands];
 }
