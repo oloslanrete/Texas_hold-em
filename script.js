@@ -20,14 +20,17 @@ function startGame(){
     startBtn.hidden = true;
     if(gm == undefined)
         gm = new GameManager();
-    else
-        return;
     let me = new Player(uid, 100);
     document.getElementById('money').innerText = '100';
     let bot = new Player("bot", 100);
     gm.joinPlayer(bot,100);
     gm.joinPlayer(me,100);
-
+}
+function resetGame(){
+    startBtn.disabled = false;
+    startBtn.hidden = false;
+    document.getElementById('money').innerText = '';
+    gm = new GameManager();
 }
 var callBtn = document.getElementById('callBtn');
 var raiseBtn = document.getElementById('raiseBtn');
@@ -140,6 +143,7 @@ class GameManager{
         //게임의 진행상황. 프리플랍 0, 플랍 1, 턴 2, 리버 3.
         this.game_phase = -1;
     }
+    
     //참여 요청시 일단은 관전자로 참여.
     joinPlayer(player){
         if(this.spectatorlist.length<this.maxSpectator){
@@ -269,8 +273,18 @@ class GameManager{
                 this.playerList[i].money-=amount;
                 this.playerList[i].reserved = amount;
                 temppot+=amount;
-            } else {    //참가비가 모자란 플레이어가 있으면 빼고 시작.
-                this.playerList.splice(i,1);
+            } else {    
+                //온라인 플레이시 참가비가 모자란 플레이어가 있으면 빼고 시작.
+                //this.playerList.splice(i,1);
+                //싱글 플레이시 승/패 메시지를 띄우고 게임 초기화
+                if(this.playerList[i].id == uid){
+                    alert('돈을 다 잃으셨습니다.');
+                }
+                else{
+                    alert(this.playerList[i].id+'님이 돈을 다 잃으셨습니다.')
+                }
+                resetGame();
+                return false;
             }
         }
         //참가자가 둘 이상이어야 더 이상 진행가능.
@@ -325,7 +339,12 @@ class GameManager{
     }
     endRound(){
         animator.clearActionDivs();
-        this.decideWinner();
+        if(this.getPlayingPlayers().length>0)
+            this.decideWinner();
+        //플레이중인 플레이어가 0명인 경우는 없어야 함.(모두가 폴드하기 전에 마지막 사람이 승자가 되므로 일어나선 안되는 일).
+        else{
+            alert('ERROR: No one is playing player');
+        }
         this.game_phase = -1;
         this.pot = 0;
         updatePot();
@@ -337,21 +356,23 @@ class GameManager{
     }
     decideWinner(){
         let i;
-        let alivePlayer = [];
-        for(i=0; i<this.playerList.length; i++){
-            if(this.playerList[i].status == playerStatusEnum.playing){
-                alivePlayer.push(this.playerList[i]);
-            }
+        let alivePlayer = this.getPlayingPlayers();
+        //나머지 사람이 폴드하여 한명만 남아 게임이 끝날 경우
+        if(alivePlayer.length == 1){
+            alert('The Winner is '+alivePlayer[0].id);
+            alivePlayer[0].money += this.pot;
+            updateMoney();
+            return;
         }
+
         //showdown. 마지막까지 플레이중인 플레이어가 2이상이면 패를 공개
-        if(alivePlayer.length>1){
-            alivePlayer.forEach(function(v){
-                if(v.id != uid){
-                    animator.flip(document.getElementById(v.id+',0'),v.inHands[0],250);
-                    animator.flip(document.getElementById(v.id+',1'),v.inHands[1],250);
-                }    
-            })
-        }
+        alivePlayer.forEach(function(v){
+            if(v.id != uid){
+                animator.flip(document.getElementById(v.id+',0'),v.inHands[0],250);
+                animator.flip(document.getElementById(v.id+',1'),v.inHands[1],250);
+            }    
+        })
+        
         //각 플레이어의 패의 점수를 저장. alert으로 각 플레이어의 점수를 표시하기 용이함.
         let scorelist=[];
         for(i=0; i<alivePlayer.length; i++){
@@ -435,6 +456,11 @@ class GameManager{
             }
         })
         if(playCount == 1){
+            //초기화
+            this.playerList.forEach(function(v){
+                v.action = playerActionEnum.actUndefined;
+                animator.clearActionDivs();
+            })
             this.endRound();
             return;
         }
@@ -625,6 +651,15 @@ class GameManager{
             return player.id == id;
         })
         return this.playerList[index];
+    }
+    getPlayingPlayers(){
+        let alive = [];
+        let i;
+        for(i=0; i<this.playerList.length; i++){
+            if(this.playerList[i].status == playerStatusEnum.playing)
+                alive.push(this.playerList[i]);
+        }
+        return alive;
     }
     ScoreToString(score){
         switch(score){
