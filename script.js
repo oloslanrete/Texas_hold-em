@@ -1,4 +1,5 @@
 'use strict';
+(function(){
 var uid;
 var gameDiv;
 const myEventBus = new Comment('my-event-bus');
@@ -1261,3 +1262,4 @@ myEventBus.addEventListener('actionEnd',function({detail}){
     gm.animateAction(gm.playerList[gm.actionIndex].id,action);
     gm.nextAction();
 });
+})();
