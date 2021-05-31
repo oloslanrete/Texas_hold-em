@@ -544,12 +544,24 @@ class GameManager{
         let i;
         let j;
         let x, y;
+        //플레이어 이름 띄우기
+        x=gameWidth-170+50;
+        for(i=0; i<right.length; i++){
+            y = (i+1)*(gameHeight/(right.length+1)) - 100;
+            animator.popName(right[i].name,x, y)
+        }
+        for(i=0; i<left.length; i++){
+            y = (i+1)*(gameHeight/(left.length+1)) - 100;
+            animator.popName(right[i].name,x, y)
+        }
+        //카드 돌리기
         for(j=0; j<2; j++){
             //오른쪽 사람들
             x=gameWidth-170+50*j;
             for(i=0; i<right.length; i++){
                 y = (i+1)*(gameHeight/(right.length+1)) - 70;
                 animator.animationQueue.push(new animation (animator.newCard(right[i].id+','+j),'move', 250,x, y));
+                
             }
             //플레이어 본인
             x=gameWidth/2-115+115*j;
@@ -559,7 +571,7 @@ class GameManager{
             //왼쪽 사람들
             x=20+50*j;
             for(i=0; i<left.length; i++){
-                y = (i+1)*(gameHeight/right.length+1);
+                y = (i+1)*(gameHeight/right.length+1) -70;
                 animator.animationQueue.push(new animation (animator.newCard(left[i].id+','+j), 250, x, y));
             }
         }
@@ -970,6 +982,7 @@ function sortCardDecrement(card1,card2){
 const animator={
     createdCards:[],
     createdActionDivs:[],
+    playerNameDivs:[],
     animationQueue: [],
     newCard: function(id){
         let deck=document.getElementsByClassName('deck')[2]
@@ -980,9 +993,6 @@ const animator={
         gameDiv.appendChild(newcard);
         this.createdCards.push(newcard);
         return newcard;
-    },
-    newActionDiv: function(action){
-        
     },
     animateNext: function(){
         let animation=this.animationQueue.shift();
@@ -1091,6 +1101,21 @@ const animator={
         div.style.fontSize = '30px';
         div.style.textShadow = '-1px 0 white, 0 1px white, 1px 0 white, 0 -1px white';
     },
+    popName: function(name, x,y){
+        //create new div.
+        let div = document.createElement('div');
+        let content=document.createTextNode(name);
+        div.appendChild(content);
+        gameDiv.appendChild(div);
+        this.playerNameDivs.push(div);
+
+        //set div's position
+        div.style.position = 'absolute';
+        div.style.top = y+'px';
+        div.style.left = x+'px';
+        div.style.fontSize = '20px';
+        div.style.textShadow = '-1px 0 white, 0 1px white, 1px 0 white, 0 -1px white';
+    },
     clearActionDivs: function(){
         console.log('clearAction')
         setTimeout(function(){
@@ -1099,6 +1124,12 @@ const animator={
                 animator.createdActionDivs.splice(i,1);
             });
         },1000);
+    },
+    clearNameDivs: function(){
+        animator.playerNameDivs.forEach(function(v,i){
+            animator.deleteCard(v);
+            animator.playerNameDivs.splice(i,1);
+        });
     },
     deleteCard: function(div){
         console.log('remove div: '+div.getAttribute('id'));
@@ -1114,6 +1145,7 @@ const animator={
             cards.forEach(function(v){
                 animator.move(v,350,20,250);
             });
+            animator.clearNameDivs();
             setTimeout(function(){
                 cards.forEach(function(v){
                     animator.deleteCard(v);
