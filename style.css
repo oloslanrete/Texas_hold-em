@@ -68,3 +68,14 @@ margin: auto;
 .menuText{
     display: inline;
 }
+table, th, td{
+    margin:auto;
+    margin-top:20px;
+    border-style: solid;
+    border-color: black;
+    border-width: 1px;
+    border-collapse: collapse;
+}
+thead{
+    background-color: gray;
+}
