@@ -2,16 +2,17 @@
 (function(){
 var uid;
 var gameDiv;
+var playersStatusTable;
 const myEventBus = new Comment('my-event-bus');
 window.addEventListener("load", function(event) {
     gameDiv = document.getElementById('gameDiv');
+    playersStatusTable = document.getElementById('playersStatusTbody');
     uid = sessionStorage.getItem('uid');
     //uid가 없으면 prompt로 입력 받음.
     if(!uid){
         sessionStorage.setItem('uid',prompt("enter your name"));
         uid = sessionStorage.getItem('uid');
     }
-    
 });
 var gm;
 var startBtn = document.getElementById('startBtn')
@@ -165,7 +166,7 @@ class GameManager{
             return;
         }
         this.spectatorlist.splice(i,1);
-        if(this.game_phase!=-1){
+        if(this.game_phase!=-1 && this.playerList.length>=this.maxPlayer){
             this.waitinglist.push(player);
             player.status=playerStatusEnum.imin;
         } else {
@@ -174,6 +175,7 @@ class GameManager{
             }
             this.playerList.splice((this.dealerIndex+1)%this.maxPlayer, 0, player)
             player.status=playerStatusEnum.notready;
+            updatePlayerTable();
         }
     }
     playerReqStart(player){
@@ -224,6 +226,7 @@ class GameManager{
                     this.maxBet = this.baseEnty;
                     this.dealingCards();
                     this.animate_dealing();
+                    updatePlayerTable();
                     console.log('end animate')
                 }
                 break;
@@ -1181,6 +1184,36 @@ function updatePot(){
     let div = document.getElementById('pot');
     div.innerText = gm.pot;
 }
+function updatePlayerTable(){
+    let count = playersStatusTable.rows.length;
+    let i;
+    for(i=0; i<count; i++){
+        playersStatusTable.deleteRow(0);
+    }
+    for(i=0; i<gm.playerList.length; i++){
+        let newRow = playersStatusTable.insertRow();
+        let cell1 = newRow.insertCell(0);
+        let cell2 = newRow.insertCell(1);
+        let cell3 = newRow.insertCell(2);
+        cell1.innerText = gm.playerList[i].name;
+        switch(gm.playerList[i].action){
+            case 0:
+                cell2.innerText = '';
+                break;
+            case 1:
+                cell2.innerText = 'call';
+                break;
+            case 2:
+                cell2.innerText = 'raise';
+                break;
+            case 3:
+                cell2.innerText = 'fold';
+                break;
+        }
+        
+        cell3.innerText = gm.playerList[i].reserved;
+    }
+}
 const playerStatusEnum = {
     spectate: 0,
     imin: 1,
@@ -1260,6 +1293,7 @@ myEventBus.addEventListener('actionEnd',function({detail}){
     }
     clearTimeout(gm.actionTimer);
     gm.animateAction(gm.playerList[gm.actionIndex].id,action);
+    updatePlayerTable();
     gm.nextAction();
 });
 })();
